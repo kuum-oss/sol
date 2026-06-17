@@ -53,8 +53,6 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
-    depends_on:
-      - target-app
 
   grafana:
     image: grafana/grafana:10.2.3
@@ -70,14 +68,14 @@ services:
       - prometheus
       - influxdb
 
-  target-app:
-    image: openjdk:21-slim
-    container_name: target-app
-    # Note: Built jar can be mounted and run
-    # For local running during load tests, it's easier to run it via Gradle.
-    # We expose port 8080.
-    ports:
-      - "8080:8080"
+#  target-app:
+#    image: openjdk:21-slim
+#    container_name: target-app
+#    # Note: Built jar can be mounted and run
+#    # For local running during load tests, it's easier to run it via Gradle.
+#    # We expose port 8080.
+#    ports:
+#      - "8080:8080"
 
 volumes:
   postgres_data:

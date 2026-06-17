@@ -24,7 +24,7 @@ class TargetSimulation : Simulation() {
             http("Authentication")
                 .post("/api/ping") // Simplified auth ping
                 .header("X-Auth-User", "#{username}")
-                .check(status().is(200))
+                .check(status().`is`(200))
                 .check(header("Set-Cookie").saveAs("sessionCookie"))
         )
         // Store session state JWT/Cookie and call serialization
@@ -36,25 +36,25 @@ class TargetSimulation : Simulation() {
                 .post("/api/serialize/jackson")
                 .header("Authorization", "Bearer #{jwtToken}")
                 .body(StringBody("""{"id":"#{username}","name":"User #{username}","tags":["gatling","test"],"rating":8.5}"""))
-                .check(status().is(200))
+                .check(status().`is`(200))
         )
         .exec(
             http("Caffeine Cache Access")
                 .get("/api/cache/caffeine")
                 .queryParam("key", "#{username}")
-                .check(status().is(200))
+                .check(status().`is`(200))
         )
         .exec(
             http("DB Query Endpoint")
                 .get("/api/db/query")
                 .queryParam("id", "1")
-                .check(status().is(200))
+                .check(status().`is`(200))
         )
         .exec(
             http("CPU Intensive Task")
                 .get("/api/algo/cpu")
                 .queryParam("iterations", "500")
-                .check(status().is(200))
+                .check(status().`is`(200))
         )
 
     init {
