@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: perf_db
+      POSTGRES_USER: perf_user
+      POSTGRES_PASSWORD: perf_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    container_name: toxiproxy
+    command: -host 0.0.0.0
+    ports:
+      - "8474:8474"   # API management
+      - "15432:15432" # DB Proxy
+      - "16379:16379" # Redis Proxy
+    depends_on:
+      - postgres-db
+      - redis-cache
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=performance-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=gatling-metrics
+      - DOCKER_INFLUXDB_INIT_RETENTION=90d
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - target-app
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      - influxdb
+
+  target-app:
+    image: openjdk:21-slim
+    container_name: target-app
+    # Note: Built jar can be mounted and run
+    # For local running during load tests, it's easier to run it via Gradle.
+    # We expose port 8080.
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  influxdb_data:

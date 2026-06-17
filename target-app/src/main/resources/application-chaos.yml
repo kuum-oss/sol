@@ -1,0 +1,25 @@
+chaos:
+  monkey:
+    enabled: true
+    assaults:
+      level: 5
+      latencyActive: true
+      latencyMinMs: 500
+      latencyMaxMs: 1500
+      exceptionsActive: false
+      exception:
+        type: java.lang.RuntimeException
+        arguments:
+          - "Chaos Monkey Exception Assault!"
+      memoryActive: false
+      memoryMillisecondsHoldAttack: 3000
+      memoryHostFractionOfFreeMemory: 0.9
+      cpuActive: false
+      cpuMillisecondsHoldAttack: 5000
+      cpuLoadTargetFraction: 0.9
+      killApplicationActive: false
+    watcher:
+      controller: true
+      repository: true
+      service: true
+      restController: true
