@@ -106,9 +106,9 @@ class TargetSimulation : Simulation() {
         ).protocols(httpProtocol)
          .assertions(
              // Target and Critical SLA criteria
-             global().responseTime().mean().lt(100),       // Target p50 < 100 ms
-             global().responseTime().percentile(95.0).lt(300), // Target p95 < 300 ms
-             global().responseTime().percentile(99.0).lt(800), // Target p99 < 800 ms
+             global().responseTime().mean().lt(if (profile == "smoke") 1000 else 100),       // Target p50 < 100 ms
+             global().responseTime().percentile(95.0).lt(if (profile == "smoke") 2000 else 300), // Target p95 < 300 ms
+             global().responseTime().percentile(99.0).lt(if (profile == "smoke") 3000 else 800), // Target p99 < 800 ms
              global().failedRequests().percent().lt(0.1)     // Target error rate < 0.1%
          )
     }

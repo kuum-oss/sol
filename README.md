@@ -49,6 +49,8 @@ docker-compose up -d
    ```
 2. Запустите сценарии Gatling:
    ```bash
+   # По умолчанию запускается профиль Smoke
+   ./gradlew :performance-tests:load-tests:runLoadTest -Dprofile=smoke
    # Другие профили: load, stress, soak, spike
    ./gradlew :performance-tests:load-tests:runLoadTest -Dprofile=load
    ```

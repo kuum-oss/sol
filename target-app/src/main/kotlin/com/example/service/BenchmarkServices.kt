@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
+import jakarta.annotation.PostConstruct
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -23,6 +24,18 @@ class BenchmarkService(
     @Autowired(required = false) val jdbcTemplate: JdbcTemplate?,
     @Autowired(required = false) val redisTemplate: StringRedisTemplate?
 ) {
+    @PostConstruct
+    fun initDb() {
+        try {
+            jdbcTemplate?.execute("CREATE TABLE IF NOT EXISTS items (id SERIAL PRIMARY KEY, name VARCHAR(255))")
+            val count = jdbcTemplate?.queryForObject("SELECT COUNT(*) FROM items", Int::class.java) ?: 0
+            if (count == 0) {
+                jdbcTemplate?.execute("INSERT INTO items (id, name) VALUES (1, 'Item 1'), (2, 'Item 2'), (3, 'Item 3')")
+            }
+        } catch (e: Exception) {
+            println("Failed to initialize database: ${e.message}")
+        }
+    }
     private val gson = Gson()
     private val caffeineCache = Caffeine.newBuilder()
         .expireAfterWrite(10, TimeUnit.MINUTES)

@@ -7,8 +7,6 @@ plugins {
 
 dependencies {
     implementation(project(":target-app"))
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     
     // Toxiproxy Java Client

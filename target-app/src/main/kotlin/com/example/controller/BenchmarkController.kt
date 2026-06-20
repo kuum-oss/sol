@@ -9,8 +9,11 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api")
 class BenchmarkController(@Autowired val benchmarkService: BenchmarkService) {
 
-    @GetMapping("/ping")
-    fun ping(): String = "pong"
+    @RequestMapping("/ping", method = [RequestMethod.GET, RequestMethod.POST])
+    fun ping(response: jakarta.servlet.http.HttpServletResponse): String {
+        response.addHeader("Set-Cookie", "JSESSIONID=mock-session-id; Path=/; HttpOnly")
+        return "pong"
+    }
 
     @PostMapping("/serialize/jackson")
     fun jackson(@RequestBody payload: Payload): String {
