@@ -17,10 +17,10 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.SECONDS)
 public class SerializationBenchmark {
 
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new KotlinModule.Builder().build());
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new com.fasterxml.jackson.module.kotlin.KotlinModule.Builder().build());
     private final Gson gson = new Gson();
     private final Json kotlinxJson = Json.Default;
-    private final KSerializer<Payload> serializer = Payload.Companion.serializer();
+    private KSerializer<Payload> serializer;
 
     @Param({"10", "100"})
     public int listSize = 10;
@@ -29,6 +29,7 @@ public class SerializationBenchmark {
 
     @Setup
     public void setup() {
+        serializer = (KSerializer<Payload>) (Object) kotlinx.serialization.SerializersKt.serializer(Payload.class);
         List<String> tags = new ArrayList<>();
         for (int i = 1; i <= listSize; i++) {
             tags.add("tag-" + i);

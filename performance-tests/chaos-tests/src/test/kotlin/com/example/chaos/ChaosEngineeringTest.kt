@@ -18,14 +18,16 @@ import java.util.concurrent.TimeUnit
 
 @SpringBootTest(
     classes = [com.example.TargetApplication::class],
-    webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration",
-        "server.port=8080"
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
     ]
 )
 @ActiveProfiles("chaos")
 class ChaosEngineeringTest {
+
+    @org.springframework.boot.test.web.server.LocalServerPort
+    private var port: Int = 0
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(2, TimeUnit.SECONDS)
@@ -35,7 +37,7 @@ class ChaosEngineeringTest {
     private var toxiClient: ToxiproxyClient? = null
     private var dbProxy: Proxy? = null
     private var redisProxy: Proxy? = null
-    private val targetUrl = "http://localhost:8080"
+    private val targetUrl get() = "http://localhost:$port"
     private val mediaTypeJson = "application/json; charset=utf-8".toMediaType()
 
     @BeforeEach

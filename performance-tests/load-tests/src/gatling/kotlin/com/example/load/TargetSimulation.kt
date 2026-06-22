@@ -73,6 +73,49 @@ class TargetSimulation : Simulation() {
                     .check(status().`is`(200))
             )
 
+    private fun buildScenario(feederBuilder: FeederBuilder<*>): ScenarioBuilder =
+        scenario("Target Application Load Scenario")
+            .feed(feederBuilder)
+            // Симуляция получения JWT-токена
+            .exec(
+                http("Authentication")
+                    .post("/api/ping")
+                    .header("X-Auth-User", "#{username}")
+                    .check(status().`is`(200))
+                    .check(header("Set-Cookie").saveAs("sessionCookie"))
+            )
+            .exec { session ->
+                session.set("jwtToken", "mock-jwt-token-for-${session.getString("username")}")
+            }
+            .exec(
+                http("Jackson Serialization")
+                    .post("/api/serialize/jackson")
+                    .header("Authorization", "Bearer #{jwtToken}")
+                    // UUID-имя пользователя → уникальное тело запроса каждый раз
+                    .body(StringBody("""{"id":"#{username}","name":"User #{username}","tags":["gatling","test"],"rating":8.5}"""))
+                    .check(status().`is`(200))
+            )
+            .exec(
+                http("Caffeine Cache Access")
+                    .get("/api/cache/caffeine")
+                    // UUID-ключ → гарантированный Cache Miss в Caffeine при первом обращении
+                    .queryParam("key", "#{username}")
+                    .check(status().`is`(200))
+            )
+            .exec(
+                http("DB Query Endpoint")
+                    .get("/api/db/query")
+                    // itemId варьируется 1..3 согласно реальным данным в БД
+                    .queryParam("id", "#{itemId}")
+                    .check(status().`is`(200))
+            )
+            .exec(
+                http("CPU Intensive Task")
+                    .get("/api/algo/cpu")
+                    .queryParam("iterations", "500")
+                    .check(status().`is`(200))
+            )
+
     init {
         val profile = System.getProperty("profile", "smoke").lowercase()
         println("Running load test profile: $profile")
@@ -105,8 +148,7 @@ class TargetSimulation : Simulation() {
         }
 
         // Smoke использует CSV (фиксированный набор), остальные — UUID-фидер
-        val feeder = if (profile == "smoke") csvFeeder.asInstanceOf() else dynamicFeeder
-        val scn = buildScenario(feeder)
+        val scn = if (profile == "smoke") buildScenario(csvFeeder) else buildScenario(dynamicFeeder)
 
         setUp(
             scn.injectOpen(injectionProfile)
