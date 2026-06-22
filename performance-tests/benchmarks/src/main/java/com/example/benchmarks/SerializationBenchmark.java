@@ -10,6 +10,7 @@ import org.openjdk.jmh.annotations.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -25,14 +26,16 @@ public class SerializationBenchmark {
     @Param({"10", "100"})
     public int listSize = 10;
 
+    private final Random random = new Random();
+    private List<String> tags;
     private Payload payload;
 
     @Setup
     public void setup() {
         serializer = (KSerializer<Payload>) (Object) kotlinx.serialization.SerializersKt.serializer(Payload.class);
-        List<String> tags = new ArrayList<>();
+        tags = new ArrayList<>();
         for (int i = 1; i <= listSize; i++) {
-            tags.add("tag-" + i);
+            tags.add("tag-" + i + "-" + random.nextInt(1000));
         }
         payload = new Payload("id-123", "Performance Test Payload", tags, 9.8);
     }

@@ -16,12 +16,12 @@ public class BusinessLogicBenchmark {
     @Param({"100", "1000"})
     public int size = 100;
 
+    private final Random random = new Random();
     private List<Integer> dataList;
 
     @Setup
     public void setup() {
         dataList = new ArrayList<>();
-        Random random = new Random();
         for (int i = 0; i < size; i++) {
             dataList.add(random.nextInt(10000));
         }
