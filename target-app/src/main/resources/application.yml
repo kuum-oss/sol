@@ -1,6 +1,10 @@
 spring:
   application:
     name: target-app
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   datasource:
     url: jdbc:postgresql://localhost:5432/perf_db
     username: perf_user

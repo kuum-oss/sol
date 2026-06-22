@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.openjdk.jmh.annotations.*;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -14,6 +15,12 @@ public class CacheBenchmark {
     private final Cache<String, String> cache = Caffeine.newBuilder()
             .maximumSize(10000)
             .build();
+
+    // Счётчик в thread-scoped состоянии для гарантированного промаха на каждой итерации
+    @State(Scope.Thread)
+    public static class MissCounter {
+        public final AtomicLong counter = new AtomicLong(0);
+    }
 
     @Setup
     public void setup() {
@@ -28,7 +35,9 @@ public class CacheBenchmark {
     }
 
     @Benchmark
-    public String getCacheMissOrPut() {
-        return cache.get("key-miss", k -> "new-value");
+    public String getCacheMissOrPut(MissCounter state) {
+        // Уникальный ключ на каждую итерацию — гарантированный Cache Miss
+        String missKey = "miss-key-" + state.counter.getAndIncrement();
+        return cache.get(missKey, k -> "new-value-for-" + k);
     }
 }

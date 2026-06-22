@@ -11,8 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.client.WebClient
-import jakarta.annotation.PostConstruct
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -24,18 +22,8 @@ class BenchmarkService(
     @Autowired(required = false) val jdbcTemplate: JdbcTemplate?,
     @Autowired(required = false) val redisTemplate: StringRedisTemplate?
 ) {
-    @PostConstruct
-    fun initDb() {
-        try {
-            jdbcTemplate?.execute("CREATE TABLE IF NOT EXISTS items (id SERIAL PRIMARY KEY, name VARCHAR(255))")
-            val count = jdbcTemplate?.queryForObject("SELECT COUNT(*) FROM items", Int::class.java) ?: 0
-            if (count == 0) {
-                jdbcTemplate?.execute("INSERT INTO items (id, name) VALUES (1, 'Item 1'), (2, 'Item 2'), (3, 'Item 3')")
-            }
-        } catch (e: Exception) {
-            println("Failed to initialize database: ${e.message}")
-        }
-    }
+    // Схема и начальные данные управляются Flyway (db/migration/V1__create_items_table.sql)
+    private val jacksonMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
     private val gson = Gson()
     private val caffeineCache = Caffeine.newBuilder()
         .expireAfterWrite(10, TimeUnit.MINUTES)
@@ -47,11 +35,10 @@ class BenchmarkService(
         .readTimeout(1, TimeUnit.SECONDS)
         .build()
 
-    private val webClient = WebClient.builder().build()
 
     // Serialization
     fun runJackson(payload: Payload): String {
-        return com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(payload)
+        return jacksonMapper.writeValueAsString(payload)
     }
 
     fun runKotlinx(payload: Payload): String {
@@ -107,11 +94,14 @@ class BenchmarkService(
 
     @CircuitBreaker(name = "httpService", fallbackMethod = "httpFallback")
     fun runWebClientCall(): String {
-        return webClient.get()
-            .uri("http://localhost:8080/api/ping")
-            .retrieve()
-            .bodyToMono(String::class.java)
-            .block(Duration.ofSeconds(1)) ?: "empty"
+        // Используем тот же OkHttpClient вместо блокирующего WebClient.block(),
+        // чтобы не исчерпывать пул потоков реактивного планировщика в синхронном MVC-стеке
+        val request = Request.Builder()
+            .url("http://localhost:8080/api/ping")
+            .build()
+        okHttpClient.newCall(request).execute().use { response ->
+            return response.body?.string() ?: "empty"
+        }
     }
 
     fun httpFallback(t: Throwable): String {

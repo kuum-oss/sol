@@ -4,6 +4,7 @@ import com.example.service.Payload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.google.gson.Gson;
+import kotlinx.serialization.KSerializer;
 import kotlinx.serialization.json.Json;
 import org.openjdk.jmh.annotations.*;
 
@@ -18,7 +19,9 @@ public class SerializationBenchmark {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new KotlinModule.Builder().build());
     private final Gson gson = new Gson();
-    
+    private final Json kotlinxJson = Json.Default;
+    private final KSerializer<Payload> serializer = Payload.Companion.serializer();
+
     @Param({"10", "100"})
     public int listSize = 10;
 
@@ -41,5 +44,10 @@ public class SerializationBenchmark {
     @Benchmark
     public String gsonSerialize() {
         return gson.toJson(payload);
+    }
+
+    @Benchmark
+    public String kotlinxSerialize() {
+        return kotlinxJson.encodeToString(serializer, payload);
     }
 }
