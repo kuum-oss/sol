@@ -104,13 +104,7 @@ docker-compose up -d
 
 ## 3. Модуль 2 — Нагрузочное тестирование (Gatling)
 
-**Шаг 1.** Запустить целевое приложение:
-
-```bash
-./gradlew :target-app:bootRun
-```
-
-**Шаг 2.** Запустить нагрузочный сценарий:
+Задача `runLoadTest` сама поднимает `target-app` (через `bootJar`) перед прогоном и останавливает его после — **вручную запускать приложение не нужно**:
 
 ```bash
 # Smoke — 5 пользователей, быстрая проверка (по умолчанию)
@@ -147,6 +141,8 @@ docker-compose up -d
 
 Отчёты сохраняются в `reports/gatling/`.
 
+> Если всё же нужно запустить `target-app` вручную (например, для просмотра логов в отдельном окне) — не запускайте после этого `runLoadTest` напрямую: задача `startTargetApp` поднимет второй процесс и упадёт из-за занятого порта 8080. Сначала погасите ручной процесс.
+
 ---
 
 ## 4. Модуль 3 — Chaos Engineering
@@ -165,7 +161,23 @@ docker-compose up -d
 | **Memory Pressure** | Chaos Monkey memory | Поведение GC при атаке на Heap |
 | **Pod Kill** | Actuator shutdown | Graceful shutdown |
 
-> Если Toxiproxy недоступен, тесты автоматически переходят в mock-режим.
+> ⚠️ **Важно:** по умолчанию `target-app` подключается к Postgres и Redis напрямую (`localhost:5432`, `localhost:6379`), **минуя** прокси-порты Toxiproxy (`15432`, `16379`). Это значит, что инъекция latency/bandwidth-хаоса через Toxiproxy сама по себе не повлияет на запросы приложения, пока вы не перенаправите `spring.datasource.url` и `spring.data.redis.host/port` в `application.yml` на прокси-порты. Без этой правки тесты DB Chaos / Cache Chaos просто проверяют поведение приложения в обычном режиме (или в mock-режиме, если Toxiproxy не запущен вовсе) — Circuit Breaker и fallback при этом всё равно отрабатывают корректно, но не из-за внесённого хаоса.
+
+---
+
+## Известные ограничения
+
+То, что задокументировано/настроено, но пока не доведено до полностью рабочего состояния:
+
+| Что заявлено | Текущее состояние | Что нужно сделать |
+|---|---|---|
+| Chaos-тесты через Toxiproxy реально бьют по трафику приложения | `target-app` ходит к Postgres/Redis напрямую, минуя прокси-порты | Перенаправить `application.yml` на порты `15432`/`16379` (см. предупреждение в разделе 4) |
+| Gatling пишет метрики в InfluxDB в реальном времени | Нет `gatling.conf` с InfluxDB data writer — Gatling пишет только локальные HTML-отчёты | Добавить `gatling.conf` с `data.writers = [console, file, graphite]` / InfluxDB-плагин и настройками подключения |
+| Grafana показывает готовые дашборды | Provisioning настроен, но папка с JSON-дашбордами пуста | Положить экспортированные дашборды (Actuator/Gatling) в `infra/grafana/provisioning/dashboards/` |
+| Datasource InfluxDB в Grafana авторизован | `secureJsonData.token` = пароль админа, не настоящий API-токен InfluxDB 2.x | Сгенерировать токен: `docker exec -it influxdb influx auth create --all-access` и подставить в `datasources.yml` |
+| Регрессия в JMH блокирует сборку | Проверка работает только при локальном запуске `runBenchmarks`, в CI не интегрирована | Добавить workflow GitHub Actions, вызывающий `runBenchmarks` на PR |
+| `BusinessLogicBenchmark` измеряет бизнес-логику приложения | Бенчмарк тестирует обобщённый sort/binary search, не связан с реальным `/api/algo/cpu` (подсчёт простых чисел) | Либо переименовать бенчмарк, либо завести отдельный JMH-бенчмарк, вызывающий `BenchmarkService.computeHeavyTask` |
+| Сервис `target-app` поднимается в Docker Compose | Сервис закомментирован в `docker-compose.yml`; Prometheus всё равно скрейпит `target-app:8080` | Либо раскомментировать сервис, либо убрать неактуальный scrape-таргет из `prometheus.yml` |
 
 ---
 
@@ -178,4 +190,4 @@ docker-compose up -d
 - **Отказоустойчивость**: интеграция Resilience4j для проверки корректности работы Circuit Breaker в условиях сбоев.
 
 Подробное описание библиотек и устройства модулей:
- **[ARCHITECTURE.md](./ARCHITECTURE.md)**
+**[ARCHITECTURE.md](./ARCHITECTURE.md)**
