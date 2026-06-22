@@ -7,25 +7,25 @@
 ### Целевое приложение (target-app)
 
 | Библиотека | Версия | Назначение |
-|---|---|---|
-| Spring Boot | 3.4.3 | Основной фреймворк |
-| Kotlin | 2.0.0 | Язык реализации |
-| Spring MVC | (BOM) | REST API |
-| Spring Data JPA | (BOM) | ORM-слой |
-| Spring Data Redis (Lettuce) | (BOM) | Distributed-кэш |
-| Spring Actuator | (BOM) | Health, метрики |
-| Spring WebFlux | (BOM) | WebClient (транзитивная зависимость) |
-| Jackson + Kotlin Module | (BOM) | JSON-сериализация |
-| kotlinx.serialization | 1.6.3 | JSON-сериализация (альтернатива) |
+|---|--------|---|
+| Spring Boot | 3.4.3  | Основной фреймворк |
+| Kotlin | 2.1.0  | Язык реализации |
+| Spring MVC | (BOM)  | REST API |
+| Spring Data JPA | (BOM)  | ORM-слой |
+| Spring Data Redis (Lettuce) | (BOM)  | Distributed-кэш |
+| Spring Actuator | (BOM)  | Health, метрики |
+| Spring WebFlux | (BOM)  | WebClient (транзитивная зависимость) |
+| Jackson + Kotlin Module | (BOM)  | JSON-сериализация |
+| kotlinx.serialization | 1.6.3  | JSON-сериализация (альтернатива) |
 | Gson | 2.10.1 | JSON-сериализация (альтернатива) |
 | OkHttpClient | 4.12.0 | HTTP-клиент |
-| Caffeine | 3.1.8 | In-process LRU-кэш |
-| HikariCP | (BOM) | Пул соединений PostgreSQL |
-| Flyway | (BOM) | Версионирование схемы БД |
-| PostgreSQL JDBC | (BOM) | Драйвер БД |
-| Resilience4j | 2.2.0 | Circuit Breaker |
-| Chaos Monkey for Spring Boot | 3.1.0 | Инъекция сбоев |
-| Micrometer + Prometheus | (BOM) | Экспорт метрик |
+| Caffeine | 3.1.8  | In-process LRU-кэш |
+| HikariCP | (BOM)  | Пул соединений PostgreSQL |
+| Flyway | (BOM)  | Версионирование схемы БД |
+| PostgreSQL JDBC | (BOM)  | Драйвер БД |
+| Resilience4j | 2.2.0  | Circuit Breaker |
+| Chaos Monkey for Spring Boot | 3.1.0  | Инъекция сбоев |
+| Micrometer + Prometheus | (BOM)  | Экспорт метрик |
 
 ### Тестирование
 
@@ -60,7 +60,7 @@
 
 ## Требования
 
-- **JVM 21+**
+- **JVM 21+** (рекомендуется 21, поддерживается до 25 включительно)
 - **Docker & Docker Compose**
 
 ---
@@ -161,7 +161,10 @@ docker-compose up -d
 | **Memory Pressure** | Chaos Monkey memory | Поведение GC при атаке на Heap |
 | **Pod Kill** | Actuator shutdown | Graceful shutdown |
 
-> ⚠️ **Важно:** по умолчанию `target-app` подключается к Postgres и Redis напрямую (`localhost:5432`, `localhost:6379`), **минуя** прокси-порты Toxiproxy (`15432`, `16379`). Это значит, что инъекция latency/bandwidth-хаоса через Toxiproxy сама по себе не повлияет на запросы приложения, пока вы не перенаправите `spring.datasource.url` и `spring.data.redis.host/port` в `application.yml` на прокси-порты. Без этой правки тесты DB Chaos / Cache Chaos просто проверяют поведение приложения в обычном режиме (или в mock-режиме, если Toxiproxy не запущен вовсе) — Circuit Breaker и fallback при этом всё равно отрабатывают корректно, но не из-за внесённого хаоса.
+> 💡 **Совет:** По умолчанию `target-app` подключается к Postgres и Redis напрямую (`localhost:5432`, `localhost:6379`). В системе предусмотрен профиль `chaos`, который перенаправляет трафик через прокси-порты Toxiproxy (`15432`, `16379`). Хаос-тесты автоматически используют этот профиль. Если вы хотите вручную проверить влияние сетевого хаоса на запущенное приложение, запускайте его с профилем `chaos`:
+> ```bash
+> ./gradlew :target-app:bootRun --args='--spring.profiles.active=chaos'
+> ```
 
 ---
 
@@ -171,7 +174,6 @@ docker-compose up -d
 
 | Что заявлено | Текущее состояние | Что нужно сделать |
 |---|---|---|
-| Chaos-тесты через Toxiproxy реально бьют по трафику приложения | `target-app` ходит к Postgres/Redis напрямую, минуя прокси-порты | Перенаправить `application.yml` на порты `15432`/`16379` (см. предупреждение в разделе 4) |
 | Gatling пишет метрики в InfluxDB в реальном времени | Нет `gatling.conf` с InfluxDB data writer — Gatling пишет только локальные HTML-отчёты | Добавить `gatling.conf` с `data.writers = [console, file, graphite]` / InfluxDB-плагин и настройками подключения |
 | Grafana показывает готовые дашборды | Provisioning настроен, но папка с JSON-дашбордами пуста | Положить экспортированные дашборды (Actuator/Gatling) в `infra/grafana/provisioning/dashboards/` |
 | Datasource InfluxDB в Grafana авторизован | `secureJsonData.token` = пароль админа, не настоящий API-токен InfluxDB 2.x | Сгенерировать токен: `docker exec -it influxdb influx auth create --all-access` и подставить в `datasources.yml` |

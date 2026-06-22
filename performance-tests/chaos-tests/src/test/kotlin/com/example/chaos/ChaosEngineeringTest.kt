@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit
     classes = [com.example.TargetApplication::class],
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
+        "spring.datasource.url=jdbc:postgresql://localhost:15432/perf_db",
+        "spring.data.redis.port=16379"
     ]
 )
 @ActiveProfiles("chaos")
@@ -44,8 +45,8 @@ class ChaosEngineeringTest {
     fun setUp() {
         try {
             toxiClient = ToxiproxyClient("localhost", 8474)
-            dbProxy = toxiClient?.getProxyOrNull("postgres-db") ?: toxiClient?.createProxy("postgres-db", "0.0.0.0:15432", "postgres-db:5432")
-            redisProxy = toxiClient?.getProxyOrNull("redis-cache") ?: toxiClient?.createProxy("redis-cache", "0.0.0.0:16379", "redis-cache:6379")
+            dbProxy = toxiClient?.getProxyOrNull("postgres-db") ?: toxiClient?.createProxy("postgres-db", "0.0.0.0:15432", "localhost:5432")
+            redisProxy = toxiClient?.getProxyOrNull("redis-cache") ?: toxiClient?.createProxy("redis-cache", "0.0.0.0:16379", "localhost:6379")
         } catch (e: Exception) {
             println("Toxiproxy is not running at localhost:8474. Running tests in simulation/mock mode.")
         }

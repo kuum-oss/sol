@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.0.0" apply false
-    kotlin("plugin.serialization") version "2.0.0" apply false
-    kotlin("plugin.spring") version "2.0.0" apply false
+    kotlin("jvm") version "2.1.0" apply false
+    kotlin("plugin.serialization") version "2.1.0" apply false
+    kotlin("plugin.spring") version "2.1.0" apply false
     id("org.springframework.boot") version "3.4.3" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
 }
@@ -13,9 +13,12 @@ allprojects {
 }
 
 subprojects {
-    tasks.withType<JavaCompile>().configureEach {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
+    apply(plugin = "java")
+
+    configure<JavaPluginExtension> {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        }
     }
 
     plugins.withId("org.jetbrains.kotlin.jvm") {

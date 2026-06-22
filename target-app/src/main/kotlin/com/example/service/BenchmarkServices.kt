@@ -73,12 +73,16 @@ class BenchmarkService(
         if (redis == null) {
             return "redis-mock-value-for-$key"
         }
-        var valOpt = redis.opsForValue().get(key)
-        if (valOpt == null) {
-            valOpt = "redis-value-for-$key"
-            redis.opsForValue().set(key, valOpt, Duration.ofMinutes(10))
+        return try {
+            var valOpt = redis.opsForValue().get(key)
+            if (valOpt == null) {
+                valOpt = "redis-value-for-$key"
+                redis.opsForValue().set(key, valOpt, Duration.ofMinutes(10))
+            }
+            valOpt
+        } catch (e: Exception) {
+            "redis-fallback-value-for-$key"
         }
-        return valOpt
     }
 
     // HTTP Client Call (Calling a self endpoint to mock external HTTP backend)
