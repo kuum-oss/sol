@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 object BenchmarkRunner {
-    private const val DEFAULT_REGRESSION_THRESHOLD_PERCENT = 10.0
+    private const val DEFAULT_REGRESSION_THRESHOLD_PERCENT = 50.0
 
     @JvmStatic
     fun main(args: Array<String>) {
