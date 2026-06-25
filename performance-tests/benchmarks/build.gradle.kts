@@ -7,6 +7,7 @@ dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:3.4.3"))
     implementation(project(":target-app"))
     implementation("org.springframework:spring-jdbc")
+    implementation("org.springframework.data:spring-data-redis")
     annotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")
     implementation("org.openjdk.jmh:jmh-core:1.37")
 
