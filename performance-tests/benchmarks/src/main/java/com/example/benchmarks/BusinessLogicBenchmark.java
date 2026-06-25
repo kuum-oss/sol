@@ -1,5 +1,6 @@
 package com.example.benchmarks;
 
+import com.example.service.BenchmarkService;
 import org.openjdk.jmh.annotations.*;
 
 import java.util.ArrayList;
@@ -17,14 +18,21 @@ public class BusinessLogicBenchmark {
     public int size = 100;
 
     private final Random random = new Random();
+    private BenchmarkService benchmarkService;
     private List<Integer> dataList;
 
     @Setup
     public void setup() {
+        benchmarkService = new BenchmarkService(null, null);
         dataList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             dataList.add(random.nextInt(10000));
         }
+    }
+
+    @Benchmark
+    public int computeHeavyTask() {
+        return benchmarkService.computeHeavyTask(size);
     }
 
     @Benchmark
