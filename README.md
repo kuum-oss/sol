@@ -83,6 +83,19 @@ docker-compose up -d
 | Prometheus | 9090 | Сбор метрик Actuator |
 | Grafana | 3000 | Дашборды (`admin` / `admin`) |
 
+Чтобы посмотреть метрики Gatling в Grafana, поднимите инфраструктуру и затем запустите нагрузочный тест:
+
+```bash
+cd performance-tests/infra
+docker-compose up -d
+```
+
+```bash
+./gradlew :performance-tests:load-tests:runLoadTest -Dprofile=smoke
+```
+
+После прогона откройте Grafana на `http://localhost:3000` и проверьте дашборды по Gatling/InfluxDB.
+
 ---
 
 ## 2. Модуль 1 — Микробенчмарки (JMH)
@@ -174,8 +187,6 @@ docker-compose up -d
 
 | Что заявлено | Текущее состояние | Что нужно сделать |
 |---|---|---|
-| Gatling пишет метрики в InfluxDB в реальном времени | Нет `gatling.conf` с InfluxDB data writer — Gatling пишет только локальные HTML-отчёты | Добавить `gatling.conf` с `data.writers = [console, file, graphite]` / InfluxDB-плагин и настройками подключения |
-| Grafana показывает готовые дашборды | Provisioning настроен, но папка с JSON-дашбордами пуста | Положить экспортированные дашборды (Actuator/Gatling) в `infra/grafana/provisioning/dashboards/` |
 | Datasource InfluxDB в Grafana авторизован | `secureJsonData.token` = пароль админа, не настоящий API-токен InfluxDB 2.x | Сгенерировать токен: `docker exec -it influxdb influx auth create --all-access` и подставить в `datasources.yml` |
 | Регрессия в JMH блокирует сборку | Проверка работает только при локальном запуске `runBenchmarks`, в CI не интегрирована | Добавить workflow GitHub Actions, вызывающий `runBenchmarks` на PR |
 | `BusinessLogicBenchmark` измеряет бизнес-логику приложения | Бенчмарк тестирует обобщённый sort/binary search, не связан с реальным `/api/algo/cpu` (подсчёт простых чисел) | Либо переименовать бенчмарк, либо завести отдельный JMH-бенчмарк, вызывающий `BenchmarkService.computeHeavyTask` |

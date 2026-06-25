@@ -36,6 +36,7 @@ services:
     container_name: influxdb
     ports:
       - "8086:8086"
+      - "2003:2003"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
@@ -43,8 +44,13 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=performance-org
       - DOCKER_INFLUXDB_INIT_BUCKET=gatling-metrics
       - DOCKER_INFLUXDB_INIT_RETENTION=90d
+    command:
+      - influxd
+      - --config
+      - /etc/influxdb2/influxdb.conf
     volumes:
       - influxdb_data:/var/lib/influxdb2
+      - ./influxdb/influxdb.conf:/etc/influxdb2/influxdb.conf:ro
 
   prometheus:
     image: prom/prometheus:latest
