@@ -15,4 +15,4 @@ datasources:
       organization: performance-org
       defaultBucket: gatling-metrics
     secureJsonData:
-      token: adminpassword
+      token: gatling-admin-token

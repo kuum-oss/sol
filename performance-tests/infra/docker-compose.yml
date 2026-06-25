@@ -36,21 +36,32 @@ services:
     container_name: influxdb
     ports:
       - "8086:8086"
-      - "2003:2003"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
       - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=gatling-admin-token
       - DOCKER_INFLUXDB_INIT_ORG=performance-org
       - DOCKER_INFLUXDB_INIT_BUCKET=gatling-metrics
       - DOCKER_INFLUXDB_INIT_RETENTION=90d
-    command:
-      - influxd
-      - --config
-      - /etc/influxdb2/influxdb.conf
     volumes:
       - influxdb_data:/var/lib/influxdb2
-      - ./influxdb/influxdb.conf:/etc/influxdb2/influxdb.conf:ro
+    healthcheck:
+      test: ["CMD", "influx", "ping", "--host", "http://localhost:8086"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  telegraf:
+    image: telegraf:1.31-alpine
+    container_name: telegraf
+    ports:
+      - "2003:2003"
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:latest
@@ -73,6 +84,7 @@ services:
     depends_on:
       - prometheus
       - influxdb
+      - telegraf
 
 #  target-app:
 #    image: openjdk:21-slim

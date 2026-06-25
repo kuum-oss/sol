@@ -80,6 +80,7 @@ docker-compose up -d
 | Redis | 6379 | Распределённый кэш |
 | Toxiproxy | 8474 | Сетевой хаос |
 | InfluxDB | 8086 | Хранение метрик Gatling |
+| Telegraf | 2003 | Приём Graphite-метрик Gatling и запись в InfluxDB |
 | Prometheus | 9090 | Сбор метрик Actuator |
 | Grafana | 3000 | Дашборды (`admin` / `admin`) |
 
@@ -93,6 +94,8 @@ docker-compose up -d
 ```bash
 ./gradlew :performance-tests:load-tests:runLoadTest -Dprofile=smoke
 ```
+
+Gatling пишет в Graphite-поток на `localhost:2003`, а Telegraf принимает его и складывает метрики в InfluxDB 2.x.
 
 После прогона откройте Grafana на `http://localhost:3000` и проверьте дашборды по Gatling/InfluxDB.
 
@@ -187,7 +190,6 @@ docker-compose up -d
 
 | Что заявлено | Текущее состояние | Что нужно сделать |
 |---|---|---|
-| Datasource InfluxDB в Grafana авторизован | `secureJsonData.token` = пароль админа, не настоящий API-токен InfluxDB 2.x | Сгенерировать токен: `docker exec -it influxdb influx auth create --all-access` и подставить в `datasources.yml` |
 | Регрессия в JMH блокирует сборку | Проверка работает только при локальном запуске `runBenchmarks`, в CI не интегрирована | Добавить workflow GitHub Actions, вызывающий `runBenchmarks` на PR |
 | `BusinessLogicBenchmark` измеряет бизнес-логику приложения | Бенчмарк тестирует обобщённый sort/binary search, не связан с реальным `/api/algo/cpu` (подсчёт простых чисел) | Либо переименовать бенчмарк, либо завести отдельный JMH-бенчмарк, вызывающий `BenchmarkService.computeHeavyTask` |
 | Сервис `target-app` поднимается в Docker Compose | Сервис закомментирован в `docker-compose.yml`; Prometheus всё равно скрейпит `target-app:8080` | Либо раскомментировать сервис, либо убрать неактуальный scrape-таргет из `prometheus.yml` |
