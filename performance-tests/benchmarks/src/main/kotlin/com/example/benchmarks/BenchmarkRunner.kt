@@ -16,8 +16,9 @@ object BenchmarkRunner {
         if (!reportsDir.exists()) {
             reportsDir.mkdirs()
         }
-        val resultFile = "reports/jmh_results.json"
-        val baselineFile = "reports/jmh_baseline.json"
+        val resultFile = System.getProperty("jmh.result.file") ?: "reports/jmh_results.json"
+        val baselineFile = System.getProperty("jmh.baseline.file") ?: "reports/jmh_baseline.json"
+        val updateBaseline = System.getProperty("jmh.update.baseline")?.toBoolean() ?: false
 
         val opt = OptionsBuilder()
             .include(".*Benchmark.*")
@@ -34,11 +35,11 @@ object BenchmarkRunner {
         Runner(opt).run()
         println("JMH Benchmarks completed. Results written to $resultFile")
 
-        if (File(baselineFile).exists()) {
-            compareWithBaseline(resultFile, baselineFile)
-        } else {
-            println("No baseline found. Creating baseline at $baselineFile")
+        if (updateBaseline || !File(baselineFile).exists()) {
+            println("Writing baseline at $baselineFile")
             Files.copy(Paths.get(resultFile), Paths.get(baselineFile), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } else {
+            compareWithBaseline(resultFile, baselineFile)
         }
     }
 
@@ -46,6 +47,7 @@ object BenchmarkRunner {
         val thresholdPercent = System.getProperty("jmh.regression.threshold.percent")
             ?.toDoubleOrNull()
             ?: DEFAULT_REGRESSION_THRESHOLD_PERCENT
+        println("JMH regression threshold: $thresholdPercent%")
 
         // Simple JSON parsing to compare scores
         val currentContent = File(currentPath).readText()

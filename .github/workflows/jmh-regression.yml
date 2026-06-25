@@ -31,8 +31,19 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Create CI benchmark baseline
+        run: >
+          ./gradlew :performance-tests:benchmarks:runBenchmarks
+          -Djmh.result.file=reports/jmh_ci_baseline_run.json
+          -Djmh.baseline.file=reports/jmh_ci_baseline.json
+          -Djmh.update.baseline=true
+
       - name: Run benchmark regression check
-        run: ./gradlew :performance-tests:benchmarks:runBenchmarks -Djmh.regression.threshold.percent=30
+        run: >
+          ./gradlew :performance-tests:benchmarks:runBenchmarks
+          -Djmh.result.file=reports/jmh_results.json
+          -Djmh.baseline.file=reports/jmh_ci_baseline.json
+          -Djmh.regression.threshold.percent=10
 
       - name: Upload JMH reports
         if: always()
@@ -42,5 +53,7 @@ jobs:
           path: |
             reports/jmh_results.json
             reports/jmh_baseline.json
+            reports/jmh_ci_baseline.json
+            reports/jmh_ci_baseline_run.json
             performance-tests/benchmarks/reports/*.json
           if-no-files-found: ignore

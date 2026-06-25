@@ -21,4 +21,16 @@ dependencies {
 tasks.register<JavaExec>("runBenchmarks") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.example.benchmarks.BenchmarkRunner")
+    System.getProperty("jmh.regression.threshold.percent")?.let {
+        systemProperty("jmh.regression.threshold.percent", it)
+    }
+    System.getProperty("jmh.result.file")?.let {
+        systemProperty("jmh.result.file", it)
+    }
+    System.getProperty("jmh.baseline.file")?.let {
+        systemProperty("jmh.baseline.file", it)
+    }
+    System.getProperty("jmh.update.baseline")?.let {
+        systemProperty("jmh.update.baseline", it)
+    }
 }
