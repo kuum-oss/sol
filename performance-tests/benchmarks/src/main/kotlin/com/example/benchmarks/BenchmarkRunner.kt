@@ -8,6 +8,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 object BenchmarkRunner {
+    private const val DEFAULT_REGRESSION_THRESHOLD_PERCENT = 10.0
+
     @JvmStatic
     fun main(args: Array<String>) {
         val reportsDir = File("reports")
@@ -41,6 +43,10 @@ object BenchmarkRunner {
     }
 
     private fun compareWithBaseline(currentPath: String, baselinePath: String) {
+        val thresholdPercent = System.getProperty("jmh.regression.threshold.percent")
+            ?.toDoubleOrNull()
+            ?: DEFAULT_REGRESSION_THRESHOLD_PERCENT
+
         // Simple JSON parsing to compare scores
         val currentContent = File(currentPath).readText()
         val baselineContent = File(baselinePath).readText()
@@ -55,8 +61,8 @@ object BenchmarkRunner {
             if (baselineResult != null && baselineResult.score != 0.0) {
                 val diffPercent = ((currentResult.score - baselineResult.score) / baselineResult.score) * 100
                 val degraded = when (currentResult.mode) {
-                    "thrpt" -> diffPercent < -10.0
-                    "avgt", "sample", "ss" -> diffPercent > 10.0
+                    "thrpt" -> diffPercent < -thresholdPercent
+                    "avgt", "sample", "ss" -> diffPercent > thresholdPercent
                     else -> false
                 }
 
@@ -66,7 +72,7 @@ object BenchmarkRunner {
                 )
 
                 if (degraded) {
-                    System.err.println("CRITICAL REGRESSION: $benchmark degraded by more than 10%")
+                    System.err.println("CRITICAL REGRESSION: $benchmark degraded by more than $thresholdPercent%")
                     hasRegression = true
                 }
             }

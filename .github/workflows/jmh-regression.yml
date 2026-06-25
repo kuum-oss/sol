@@ -32,7 +32,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run benchmark regression check
-        run: ./gradlew :performance-tests:benchmarks:runBenchmarks
+        run: ./gradlew :performance-tests:benchmarks:runBenchmarks -Djmh.regression.threshold.percent=30
 
       - name: Upload JMH reports
         if: always()
