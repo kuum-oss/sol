@@ -1,0 +1,42 @@
+name: JMH Regression
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  run-benchmarks:
+    name: Run JMH Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run benchmark regression check
+        run: ./gradlew :performance-tests:benchmarks:runBenchmarks
+
+      - name: Upload JMH reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmh-reports
+          path: |
+            reports/jmh_results.json
+            reports/jmh_baseline.json
+            performance-tests/benchmarks/reports/*.json
+          if-no-files-found: ignore

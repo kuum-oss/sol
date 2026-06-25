@@ -32,9 +32,12 @@ object BenchmarkRunner {
         Runner(opt).run()
         println("JMH Benchmarks completed. Results written to $resultFile")
 
-        // No baseline found or always update baseline (CI workaround)
-        println("Updating baseline with current results...")
-        Files.copy(Paths.get(resultFile), Paths.get(baselineFile), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        if (File(baselineFile).exists()) {
+            compareWithBaseline(resultFile, baselineFile)
+        } else {
+            println("No baseline found. Creating baseline at $baselineFile")
+            Files.copy(Paths.get(resultFile), Paths.get(baselineFile), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun compareWithBaseline(currentPath: String, baselinePath: String) {
@@ -47,18 +50,23 @@ object BenchmarkRunner {
         val baselineScores = parseJmhJson(baselineContent)
 
         var hasRegression = false
-        for ((benchmark, currentScore) in currentScores) {
-            val baselineScore = baselineScores[benchmark]
-            if (baselineScore != null) {
-                // If it is throughput (ops/sec), higher is better, so degradation is a decrease
-                // If it is average time, lower is better, so degradation is an increase
-                val diffPercent = ((currentScore - baselineScore) / baselineScore) * 100
-                println("Benchmark: $benchmark | Current: $currentScore | Baseline: $baselineScore | Diff: ${"%.2f".format(diffPercent)}%")
+        for ((benchmark, currentResult) in currentScores) {
+            val baselineResult = baselineScores[benchmark]
+            if (baselineResult != null && baselineResult.score != 0.0) {
+                val diffPercent = ((currentResult.score - baselineResult.score) / baselineResult.score) * 100
+                val degraded = when (currentResult.mode) {
+                    "thrpt" -> diffPercent < -10.0
+                    "avgt", "sample", "ss" -> diffPercent > 10.0
+                    else -> false
+                }
 
-                // For simplicity, let's assume throughput is our target (higher is better)
-                // If current is more than 10% lower than baseline:
-                if (diffPercent < -10.0) {
-                    System.err.println("CRITICAL REGRESSION: $benchmark degraded by ${"%.2f".format(-diffPercent)}% (> 10% threshold)")
+                println(
+                    "Benchmark: $benchmark | Mode: ${currentResult.mode} | Current: ${currentResult.score} | " +
+                        "Baseline: ${baselineResult.score} | Diff: ${"%.2f".format(diffPercent)}%"
+                )
+
+                if (degraded) {
+                    System.err.println("CRITICAL REGRESSION: $benchmark degraded by more than 10%")
                     hasRegression = true
                 }
             }
@@ -68,14 +76,20 @@ object BenchmarkRunner {
         }
     }
 
-    private fun parseJmhJson(json: String): Map<String, Double> {
-        val map = mutableMapOf<String, Double>()
-        val regex = """"benchmark"\s*:\s*"([^"]+)".*?"primaryMetric"\s*:\s*\{\s*"score"\s*:\s*([0-9.]+)""".toRegex(RegexOption.DOT_MATCHES_ALL)
+    private fun parseJmhJson(json: String): Map<String, BenchmarkResult> {
+        val map = mutableMapOf<String, BenchmarkResult>()
+        val regex = """"benchmark"\s*:\s*"([^"]+)".*?"mode"\s*:\s*"([^"]+)".*?"primaryMetric"\s*:\s*\{\s*"score"\s*:\s*([0-9.Ee+-]+)""".toRegex(RegexOption.DOT_MATCHES_ALL)
         regex.findAll(json).forEach { match ->
             val name = match.groupValues[1].substringAfterLast(".")
-            val score = match.groupValues[2].toDouble()
-            map[name] = score
+            val mode = match.groupValues[2]
+            val score = match.groupValues[3].toDouble()
+            map[name] = BenchmarkResult(mode, score)
         }
         return map
     }
+
+    private data class BenchmarkResult(
+        val mode: String,
+        val score: Double
+    )
 }
